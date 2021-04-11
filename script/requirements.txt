@@ -1,0 +1,8 @@
+connexion
+Pillow
+flask_cors
+matplotlib
+tk
+tensorflow
+numpy
+pandas

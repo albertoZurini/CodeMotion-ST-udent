@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<head>
+
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+
+    <title>ST-udent Discover</title>
+
+    <meta content="" name="description">
+
+    <meta content="" name="keywords">
+
+    <!-- FAVICONS -->
+
+    <!-- CSS THIRD PART -->
+    <link href="assets/bootstrap/bootstrap.min.css" rel="stylesheet">
+
+    <!-- MAIN CSS -->
+    <link href="assets/css/main.css" rel="stylesheet">
+    <link href="assets/css/chat.css" rel="stylesheet">
+
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="py-5 text-center">
+            <a href="index.html"><img class="d-block mx-auto mb-4" src="assets/img/logoNew.png" width="200" height="200" ></a>
+            <h1 class="stColor">Discover</h1>
+            <h4 class="titleDescription linea">Here you can analize your electronics components for discover and learn what components <a href="https://www.st.com/content/st_com/en.html" target="_blank" class="stColor">STMicroelectronics</a> produce for this devices.</h4>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+            
+                         
+            <div class="container content">
+                <h2 class="stColor text-center">Does <b class="stColor">ST</b> manufacture anything for this object (photo)?</h2>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">Choose an image</div>
+                            <div class="card-body height3">
+                                <div class="form-group">
+                                    
+                                    <input type="file" 
+                                    class="form-control-file" 
+                                    id="uploadImage" accept="image/png, image/jpeg">
+                                </div>
+                
+                                <button onclick="analyzeImage();" class="btn btn-primary mb-2 customButton">START THE ANALYSIS</button>
+                            </div>
+                    </div>
+                </div>
+
+                <div id="serverResponse" class="col-12 serverResponse"></div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+
+        <!-- QUA VA IL CHATBOT -->
+        <div class="row">
+            <div class="col-md-12">
+            
+                         
+            <div class="container content">
+                <h2 class="stColor text-center">Assi<b>ST</b>ant</h2>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">Chat</div>
+                            <div class="card-body height3">
+                                <ul class="chat-list" id="chatList">
+                                    <li class="in">
+                                        <div class="chat-body">
+                                            <div class="chat-message">
+                                                <h5>Assi<b class="stColor">ST</b>ant</h5>
+                                                <p>Hello I'm Assi<b class="stColor">ST</b>ant, and I'm willing to help you find out our products!</p>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="panel-footer">
+                            <div class="input-group">
+                                <input id="chatMessageText" type="text" class="form-control input-sm chat_input" placeholder="Write your message here..." />
+                                <span class="input-group-btn">
+                                <button 
+                                class="btn btn-primary btn-sm" 
+                                id="btn-chat" 
+                                style="height:calc(1.5em + 0.75rem + 5px);"
+                                >Send</button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="serverResponseChat" class="col-12 serverResponse"></div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+</div>
+
+    <footer class="container text-center">
+        <p>&copy; 2021 <a href="https://www.st.com/content/st_com/en.html" target="_blank" class="stColor">STMicroelectronics</a></p>
+    </footer>
+
+    <script src="assets/jquery-3.6.0.min.js"></script>
+    <script src="assets/bootstrap/bootstrap.bundle.js"></script>
+
+    <script src="assets/js/core.js"></script>
+
+    <script>
+        function analyzeImage() {
+            function getBase64(file) {
+                var reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function() {
+                    fetch("/v1/classify/classifyImage", {
+                            method: "POST",
+                            mode: 'cors',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                image_b64: reader.result
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            let text = "Select:\n";
+                            for (let i in data) {
+                                let item = data[i],
+                                    name = item.class,
+                                    imgUrl = item.imgEndpoint,
+                                    score = item.score;
+                                text += `${i}: ${name} - ${score}\n`
+                            }
+                            let chosen = prompt(text, "0");
+                            showDataForDevice(data[chosen], "#serverResponse");
+                        })
+                };
+                reader.onerror = function(error) {
+                    console.log('Error: ', error);
+                };
+            }
+
+            var file = document.getElementById('uploadImage').files[0];
+            getBase64(file); // prints the base64 string
+        }
+
+    </script>
+
+
+<script>
+    function getMessageHtml(type, text){
+        if(type=="in"){
+            return `<li class="in">
+                        <div class="chat-body">
+                            <div class="chat-message">
+                                <h5>Assi<b class="stColor">ST</b>ant</h5>
+                                <p>${text}</p>
+                            </div>
+                        </div>
+                    </li>`;
+        } else {
+            return `<li class="out">
+                        <div class="chat-body">
+                            <div class="chat-message">
+                                <p>${text}</p>
+                            </div>
+                        </div>
+                    </li>`;
+        }
+    }
+
+    function addToChat(type, text){
+        let html = $("#chatList").html();
+        html+=getMessageHtml(type, text);
+        $("#chatList").html(html);
+        isAdding = false;
+    }
+
+    function showDataForDeviceChat(name, endpoint, where){
+        showDataForDevice({
+            class: name,
+            imgEndpoint: endpoint
+        }, where);
+    }
+
+
+    function queryBot(){
+        let queryText = $("#chatMessageText").val();
+        addToChat("out", queryText);
+
+
+        fetch("/v1/classify/classifyText", {
+            method: "POST",
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: queryText
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            html = "Do you mean any of these products?"
+            html += "<ul class='showPoint'>"
+            for(let i in data){
+                let component = data[i];
+                console.log(component)
+                html += `<a class='pointer' onclick="showDataForDeviceChat('${component.class}', '${component.imgEndpoint}', '#serverResponseChat')">`;
+                html += `<li>&middot; ${component.class}</li>`;
+                html += "</a>";
+            }
+            html += "</ul>"
+
+            addToChat("in", html);
+        })
+    }
+
+    $(document).ready(() => {
+        $("#chatMessageText").on("keyup", (e) => {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                queryBot()
+            }
+        })
+
+        $("#btn-chat").click(() => {
+            queryBot()
+        })
+
+    })
+</script>
+
+
+
+
+</body>
+
+</html>
